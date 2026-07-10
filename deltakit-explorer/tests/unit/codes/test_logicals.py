@@ -1,12 +1,13 @@
-import deltakit_circuit as circuit
-import deltakit_stim as stim
-import pytest
-import numpy as np
 from itertools import product
 
+import deltakit_circuit as circuit
+import deltakit_stim as stim
+import numpy as np
+import pytest
+
 from deltakit_explorer.codes._logicals import (
+    css_code_compute_logicals,
     paulistring_to_operator,
-    css_code_compute_logicals
 )
 
 
