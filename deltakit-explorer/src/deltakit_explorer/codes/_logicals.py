@@ -7,7 +7,9 @@ with a collection of stabilisers.
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable
+from typing import NamedTuple
 
+import galois
 import numpy as np
 from deltakit_circuit import PauliX, PauliY, PauliZ, Qubit
 from deltakit_circuit._qubit_identifiers import _PauliGate
@@ -241,6 +243,31 @@ def get_logical_operators_from_css_parity_check_matrices(
     )
 
 
+def compute_lz_galois(_hx: NDArray[np.floating], _hz: NDArray[np.floating]) -> NDArray[np.floating]:
+
+    _hx_gf = galois.GF2(np.asarray(_hx,dtype=np.int_))
+    _hz_gf = galois.GF2(np.asarray(_hz, dtype=np.int_))
+
+    ker_hx_gf = _hx_gf.null_space()
+    rank_hz_gf = np.linalg.matrix_rank(_hz_gf)
+    
+    log_stack = np.vstack((_hz_gf, ker_hx_gf))
+    pivots = get_pivots(log_stack)[rank_hz_gf:]
+
+    return np.asarray(log_stack[pivots])
+
+
+def get_pivots(check: galois.FieldArray) -> NDArray[np.int_]:
+    rr = check.T.row_reduce()
+    pivots: list[int] = []
+    for row in rr:
+        nz = np.flatnonzero(row == 1)
+        if nz.size:
+            pivots.append(int(nz[0]))
+    return np.asarray(pivots, dtype=np.int_)
+    
+
+
 def css_code_compute_logicals(
     hx: NDArray[np.floating], hz: NDArray[np.floating]
 ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
@@ -292,4 +319,8 @@ def css_code_compute_logicals(
 
         return np.asarray(log_stack[pivots])
 
-    return compute_lz(hz, hx), compute_lz(hx, hz)
+    return compute_lz_galois(hz, hx), compute_lz_galois(hx, hz)
+
+
+
+
