@@ -102,7 +102,7 @@ from deltakit_explorer.qpu._circuits._tableau_functions import (
 )
 from deltakit_explorer.qpu._native_gate_set import NativeGateSet
 
-CURRENT_STIM_VERSION = Version(version("deltakit_stim"))
+CURRENT_STIM_VERSION = Version(version("deltakit-stim"))
 STIM_VERSION_V1_13_0 = Version("1.13.0")
 
 
