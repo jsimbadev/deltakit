@@ -3,6 +3,7 @@ from itertools import product
 import deltakit_circuit as circuit
 import deltakit_stim as stim
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 from deltakit_explorer.codes._logicals import (
@@ -38,7 +39,7 @@ def test_paulistring_to_operator(string):
 #     operators_res == operators_ref
 
 
-def _binary_matrix(rows: np.ndarray) -> np.ndarray:
+def _binary_matrix(rows: npt.ArrayLike) -> npt.NDArray[np.uint8]:
     """Convert binary rows into a dense ``uint8`` array.
 
     Args:
@@ -50,7 +51,7 @@ def _binary_matrix(rows: np.ndarray) -> np.ndarray:
     return np.asarray(rows, dtype=np.uint8)
 
 
-def _empty_binary_matrix(n_cols: int) -> np.ndarray:
+def _empty_binary_matrix(n_cols: int) -> npt.NDArray[np.uint8]:
     """Construct an empty dense ``uint8`` array with a fixed column count.
 
     Args:
@@ -62,7 +63,7 @@ def _empty_binary_matrix(n_cols: int) -> np.ndarray:
     return np.zeros((0, n_cols), dtype=np.uint8)
 
 
-def _binary_row_space(matrix: np.ndarray) -> set[tuple[int, ...]]:
+def _binary_row_space(matrix: npt.NDArray[np.uint8]) -> set[tuple[int, ...]]:
     """Enumerate the row space of a binary array using GF(2) arithmetic.
 
     Args:
@@ -93,7 +94,7 @@ def _binary_row_space(matrix: np.ndarray) -> set[tuple[int, ...]]:
     return vectors
 
 
-def _binary_null_space(matrix: np.ndarray) -> set[tuple[int, ...]]:
+def _binary_null_space(matrix: npt.NDArray[np.uint8]) -> set[tuple[int, ...]]:
     """Enumerate the null space of a binary array using GF(2) arithmetic.
 
     Args:
@@ -124,9 +125,9 @@ def _dimension(space: set[tuple[int, ...]]) -> int:
 
 
 def _assert_logical_basis(
-    logicals: np.ndarray,
-    null_space_defining_checks: np.ndarray,
-    quotient_space_defining_checks: np.ndarray,
+    logicals: npt.NDArray[np.uint8],
+    null_space_defining_checks: npt.NDArray[np.uint8],
+    quotient_space_defining_checks: npt.NDArray[np.uint8],
 ) -> None:
     """Assert that returned logicals have the expected CSS logical structure.
 
@@ -185,7 +186,7 @@ def _assert_logical_basis(
     ],
 )
 def test_css_code_compute_logicals_returns_valid_css_logical_bases(
-    hx: np.ndarray, hz: np.ndarray
+    hx: npt.NDArray[np.uint8], hz: npt.NDArray[np.uint8]
 ):
     assert np.all((hx @ hz.T) % 2 == 0)
 
