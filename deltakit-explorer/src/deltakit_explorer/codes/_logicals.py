@@ -241,19 +241,20 @@ def get_logical_operators_from_css_parity_check_matrices(
     )
 
 
-def pivot_rows(check: galois.FieldArray) -> NDArray[np.int_]:
+def pivot_rows(parity_check_matrix: galois.FieldArray) -> NDArray[np.int_]:
     """
     Compute the pivot row indices of a dense binary check matrix over GF(2).
 
     Args:
-        check: A dense binary check matrix represented as a ``galois.FieldArray``
-            over GF(2).
+        parity_check_matrix: A dense binary check matrix represented as a
+            ``galois.FieldArray`` over GF(2).
 
     Returns:
-        The pivot row indices of ``check``.
+        The pivot row indices of ``parity_check_matrix``.
     """
-    # Pivot rows of ``check`` are the non-zero pivot columns of ``check.T``.
-    row_reduced = check.T.row_reduce()
+    # Pivot rows of ``parity_check_matrix`` are the non-zero pivot columns of
+    # ``parity_check_matrix.T``.
+    row_reduced = parity_check_matrix.T.row_reduce()
     pivots: list[int] = []
     for row in row_reduced:
         non_zero_row = np.flatnonzero(row != 0)
