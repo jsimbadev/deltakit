@@ -38,13 +38,45 @@ def test_paulistring_to_operator(string):
 #     operators_res == operators_ref
 
 
-def _binary_matrix(rows: list[list[int]], n_cols: int) -> np.ndarray:
-    if len(rows) == 0:
-        return np.zeros((0, n_cols), dtype=np.uint8)
+def _binary_matrix(rows: np.ndarray) -> np.ndarray:
+    """Convert binary rows into a dense ``uint8`` array.
+
+    Args:
+        rows: Row vectors to place in the matrix.
+
+    Returns:
+        A dense ``uint8`` array built from ``rows``.
+    """
     return np.asarray(rows, dtype=np.uint8)
 
 
+def _empty_binary_matrix(n_cols: int) -> np.ndarray:
+    """Construct an empty dense ``uint8`` array with a fixed column count.
+
+    Args:
+        n_cols: Number of columns in the returned matrix.
+
+    Returns:
+        A dense ``uint8`` array of shape ``(0, n_cols)``.
+    """
+    return np.zeros((0, n_cols), dtype=np.uint8)
+
+
 def _binary_row_space(matrix: np.ndarray) -> set[tuple[int, ...]]:
+    """Enumerate the row space of a binary array using GF(2) arithmetic.
+
+    Args:
+        matrix: A dense binary ``uint8`` array.
+
+    Returns:
+        The set of all binary vectors obtainable as mod-2 sums of rows of
+        ``matrix``, represented as tuples.
+
+    Notes:
+        This helper uses a brute-force enumeration over all binary choices of row
+        coefficients, so it is only suitable for the small matrices used in these
+        tests.
+    """
     num_rows, num_cols = matrix.shape
 
     if num_rows == 0:
@@ -62,6 +94,20 @@ def _binary_row_space(matrix: np.ndarray) -> set[tuple[int, ...]]:
 
 
 def _binary_null_space(matrix: np.ndarray) -> set[tuple[int, ...]]:
+    """Enumerate the null space of a binary array using GF(2) arithmetic.
+
+    Args:
+        matrix: A dense binary ``uint8`` array.
+
+    Returns:
+        The set of all binary vectors ``v`` such that ``matrix @ v == 0`` over
+        GF(2), represented as tuples.
+
+    Notes:
+        This helper checks every binary vector of the appropriate length, so it is
+        a brute-force construction intended only for the small test cases in this
+        module.
+    """
     _, num_cols = matrix.shape
 
     vectors: set[tuple[int, ...]] = set()
@@ -78,36 +124,47 @@ def _dimension(space: set[tuple[int, ...]]) -> int:
 
 
 def _assert_logical_basis(
-    logicals: np.ndarray, kernel_checks: np.ndarray, image_checks: np.ndarray
+    logicals: np.ndarray,
+    null_space_defining_checks: np.ndarray,
+    quotient_space_defining_checks: np.ndarray,
 ) -> None:
-    assert logicals.ndim == 2
-    assert logicals.shape[1] == kernel_checks.shape[1] == image_checks.shape[1]
-    assert np.all(np.isin(logicals, [0, 1]))
+    logicals_is_matrix = logicals.ndim == 2
+    num_logical_columns = logicals.shape[1]
+    num_logical_rows = logicals.shape[0]
+    num_null_space_columns = null_space_defining_checks.shape[1]
+    num_quotient_space_columns = quotient_space_defining_checks.shape[1]
+    logicals_are_binary = np.all(np.isin(logicals, [0, 1]))
 
-    null_space = _binary_null_space(kernel_checks)
-    image_space = _binary_row_space(image_checks)
-    generated_space = _binary_row_space(np.vstack([image_checks, logicals]))
+    assert logicals_is_matrix
+    assert num_logical_columns == num_null_space_columns == num_quotient_space_columns
+    assert logicals_are_binary
 
-    # CSS logicals should extend the image space into a basis for the kernel.
+    null_space = _binary_null_space(null_space_defining_checks)
+    quotient_space = _binary_row_space(quotient_space_defining_checks)
+    generated_space = _binary_row_space(
+        np.vstack([quotient_space_defining_checks, logicals])
+    )
+
+    # CSS logicals should extend the quotient space into a basis for the null space.
     assert generated_space == null_space
 
-    expected_num_logicals = _dimension(null_space) - _dimension(image_space)
-    assert logicals.shape[0] == expected_num_logicals
+    expected_num_logicals = _dimension(null_space) - _dimension(quotient_space)
+    assert num_logical_rows == expected_num_logicals
 
 
 @pytest.mark.parametrize(
     ("hx", "hz"),
     [
-        (_binary_matrix([], 3), _binary_matrix([], 3)),
-        (_binary_matrix([[1, 1, 0], [0, 1, 1]], 3), _binary_matrix([], 3)),
-        (_binary_matrix(np.eye(3, dtype=np.uint8).tolist(), 3), _binary_matrix([], 3)),
+        (_empty_binary_matrix(3), _empty_binary_matrix(3)),
+        (_binary_matrix([[1, 1, 0], [0, 1, 1]]), _empty_binary_matrix(3)),
+        (_binary_matrix(np.eye(3, dtype=np.uint8).tolist()), _empty_binary_matrix(3)),
         (
-            _binary_matrix([[1, 1, 0], [0, 1, 1], [1, 0, 1]], 3),
-            _binary_matrix([], 3),
+            _binary_matrix([[1, 1, 0], [0, 1, 1], [1, 0, 1]]),
+            _empty_binary_matrix(3),
         ),
         (
-            _binary_matrix([[1, 1, 1, 1]], 4),
-            _binary_matrix([[1, 1, 0, 0], [0, 0, 1, 1]], 4),
+            _binary_matrix([[1, 1, 1, 1]]),
+            _binary_matrix([[1, 1, 0, 0], [0, 0, 1, 1]]),
         ),
     ],
 )
@@ -123,9 +180,9 @@ def test_css_code_compute_logicals_returns_valid_css_logical_bases(
 
 
 def test_css_code_compute_logicals_is_invariant_to_redundant_rows():
-    hx = _binary_matrix([[1, 1, 0], [0, 1, 1]], 3)
-    redundant_hx = _binary_matrix([[1, 1, 0], [0, 1, 1], [1, 0, 1]], 3)
-    hz = _binary_matrix([], 3)
+    hx = _binary_matrix([[1, 1, 0], [0, 1, 1]])
+    redundant_hx = _binary_matrix([[1, 1, 0], [0, 1, 1], [1, 0, 1]])
+    hz = _empty_binary_matrix(3)
 
     lx, lz = css_code_compute_logicals(hx.astype(float), hz.astype(float))
     redundant_lx, redundant_lz = css_code_compute_logicals(
@@ -148,10 +205,9 @@ def test_css_code_compute_logicals_preserves_logical_dimension_for_known_rank_ch
             [0, 1, 1, 0, 0, 1, 1, 0],
             [0, 0, 0, 1, 1, 1, 1, 0],
             [1, 1, 1, 1, 1, 1, 1, 1],
-        ],
-        8,
+        ]
     )
-    hz = _binary_matrix([], 8)
+    hz = _empty_binary_matrix(8)
 
     rank_hx = _dimension(_binary_row_space(hx))
     assert rank_hx == 4

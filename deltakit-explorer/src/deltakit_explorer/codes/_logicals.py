@@ -252,13 +252,13 @@ def pivot_rows(check: galois.FieldArray) -> NDArray[np.int_]:
     Returns:
         The pivot row indices of ``check``.
     """
-    # Pivot rows of ``check`` are the pivot columns of ``check.T``.
-    rr = check.T.row_reduce()
+    # Pivot rows of ``check`` are the non-zero pivot columns of ``check.T``.
+    row_reduced = check.T.row_reduce()
     pivots: list[int] = []
-    for row in rr:
-        nz = np.flatnonzero(row != 0)
-        if nz.size:
-            pivots.append(int(nz[0]))
+    for row in row_reduced:
+        non_zero_row = np.flatnonzero(row != 0)
+        if non_zero_row.size:
+            pivots.append(int(non_zero_row[0]))
     return np.asarray(pivots, dtype=np.int_)
 
 
@@ -295,9 +295,21 @@ def css_code_compute_logicals(
         a tuple ``(lx, lz)`` representing the X and Z logicals.
     """
 
-    def compute_lz_galois(
+    def compute_lz(
         _hx: NDArray[np.floating], _hz: NDArray[np.floating]
     ) -> NDArray[np.floating]:
+        """Compute a basis of logical operators for one side of a CSS code.
+
+        This function finds operators that satisfy the checks in ``_hx`` but are
+        not just combinations of the checks in ``_hz``.
+
+        Args:
+            _hx: Check matrix used to define valid operators.
+            _hz: Check matrix used to remove redundant operators.
+
+        Returns:
+            A binary matrix whose rows are logical operators.
+        """
         _hx_gf = galois.GF2(np.asarray(_hx, dtype=np.int_))
         _hz_gf = galois.GF2(np.asarray(_hz, dtype=np.int_))
 
@@ -309,4 +321,4 @@ def css_code_compute_logicals(
 
         return np.asarray(log_stack[pivots])
 
-    return compute_lz_galois(hz, hx), compute_lz_galois(hx, hz)
+    return compute_lz(hz, hx), compute_lz(hx, hz)
